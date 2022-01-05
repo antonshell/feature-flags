@@ -26,12 +26,12 @@ class DataFactory
     ) {
         $this->entityManager = $entityManager;
         $this->faker = Factory::create();
-        $this->getDoctrineModule();
+        $this->initializeDoctrineModule();
     }
 
     public function createProject(array $data = []): Project
     {
-        $data = $this->addDefaults($data, [
+        $data = $this->setDefaultValues($data, [
             'name' => 'demo',
             'description' => 'demo project',
             'owner' => 'antonshell',
@@ -49,7 +49,7 @@ class DataFactory
 
     public function createEnvironment(array $data = []): Environment
     {
-        $data = $this->addDefaults($data, [
+        $data = $this->setDefaultValues($data, [
             'name' => 'prod',
             'description' => 'Production environment',
         ]);
@@ -67,7 +67,7 @@ class DataFactory
 
     public function createFeature(array $data = []): Feature
     {
-        $data = $this->addDefaults($data, [
+        $data = $this->setDefaultValues($data, [
             'name' => 'demo-feature',
             'description' => 'Demo feature',
         ]);
@@ -85,7 +85,7 @@ class DataFactory
 
     public function createFeatureValue(array $data = []): FeatureValue
     {
-        $data = $this->addDefaults($data, [
+        $data = $this->setDefaultValues($data, [
             'enabled' => true,
         ]);
 
@@ -106,12 +106,12 @@ class DataFactory
         ]);
     }
 
-    protected function addDefaults(array $data, array $defaults): array
+    protected function setDefaultValues(array $data, array $defaults): array
     {
         return array_merge($defaults, $data);
     }
 
-    private function getDoctrineModule(): void
+    private function initializeDoctrineModule(): void
     {
         $di = new Di();
         $moduleContainer = new ModuleContainer($di, []);
