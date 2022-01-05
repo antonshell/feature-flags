@@ -1,0 +1,32 @@
+# Based on this workflow: https://github.com/Legion2/open-cue-service/blob/main/.github/workflows/pages.yml
+name: Swagger UI
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Upload openapi.yaml
+        uses: actions/upload-artifact@v2
+        with:
+          name: spec-file
+          path: swagger/openapi.yaml
+      - name: Download openapi.json
+        uses: actions/download-artifact@v2
+        with:
+          name: spec-file
+      - name: Generate Swagger UI
+        uses: Legion2/swagger-ui-action@v1
+        with:
+          output: swagger-ui
+          spec-file: swagger/openapi.yaml
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: swagger-ui
+          destination_dir: docs/swagger-ui
