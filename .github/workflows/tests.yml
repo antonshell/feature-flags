@@ -110,3 +110,12 @@ jobs:
         with:
           percentage: "95"
           filename: "coverage.xml"
+      - name: Upload report to codecov
+        uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: tests
+          name: codecov-feature-flags
+          fail_ci_if_error: true
+          verbose: true
