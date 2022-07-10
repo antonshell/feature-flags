@@ -1,4 +1,13 @@
 {
+    "codeception/codeception": {
+        "version": "4.2",
+        "recipe": {
+            "repo": "github.com/symfony/recipes-contrib",
+            "branch": "main",
+            "version": "2.3",
+            "ref": "30798e46831f4fc641fca83c0423918518901cd7"
+        }
+    },
     "composer/package-versions-deprecated": {
         "version": "1.11.99.2"
     },
