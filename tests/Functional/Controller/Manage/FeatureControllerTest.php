@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Functional\Controller\Root;
+namespace App\Tests\Functional\Controller\Manage;
 
 use App\Tests\Fixtures\Controller\Manage\FeatureControllerFixture;
 use App\Tests\Functional\Controller\AbstractControllerTest;
