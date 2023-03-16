@@ -177,21 +177,6 @@
     "phar-io/version": {
         "version": "3.1.0"
     },
-    "php-cs-fixer/diff": {
-        "version": "v2.0.2"
-    },
-    "phpdocumentor/reflection-common": {
-        "version": "2.2.0"
-    },
-    "phpdocumentor/reflection-docblock": {
-        "version": "5.2.2"
-    },
-    "phpdocumentor/type-resolver": {
-        "version": "1.4.0"
-    },
-    "phpspec/prophecy": {
-        "version": "1.13.0"
-    },
     "phpstan/phpdoc-parser": {
         "version": "0.5.4"
     },
@@ -518,9 +503,6 @@
     },
     "theseer/tokenizer": {
         "version": "1.2.0"
-    },
-    "webmozart/assert": {
-        "version": "1.10.0"
     },
     "willdurand/jsonp-callback-validator": {
         "version": "v1.1.0"

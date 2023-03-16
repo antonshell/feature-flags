@@ -11,9 +11,12 @@ use Doctrine\ORM\Mapping\UniqueConstraint;
 
 /**
  * @ORM\Entity(repositoryClass=FeatureValueRepository::class)
+ *
  * @ORM\HasLifecycleCallbacks
+ *
  * @Table(name="feature_value",
  *    uniqueConstraints={
+ *
  *        @UniqueConstraint(name="feature_value_unique",
  *            columns={"feature_id", "environment_id"})
  *    }
@@ -25,7 +28,9 @@ class FeatureValue
 
     /**
      * @ORM\Id
+     *
      * @ORM\GeneratedValue
+     *
      * @ORM\Column(type="integer")
      */
     private $id;
@@ -39,6 +44,7 @@ class FeatureValue
      * @var Feature
      *
      * @ORM\ManyToOne(targetEntity="Feature", inversedBy="values")
+     *
      * @ORM\JoinColumn(name="feature_id", referencedColumnName="id")
      */
     private $feature;
@@ -47,6 +53,7 @@ class FeatureValue
      * @var Environment
      *
      * @ORM\ManyToOne(targetEntity="Environment", inversedBy="featuresValues")
+     *
      * @ORM\JoinColumn(name="environment_id", referencedColumnName="id")
      */
     private $environment;

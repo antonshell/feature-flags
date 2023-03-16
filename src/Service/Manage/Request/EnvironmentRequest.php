@@ -13,9 +13,11 @@ class EnvironmentRequest
      * @var string
      *
      * @Serializer\SerializedName("name")
+     *
      * @Serializer\Type("string")
      *
      * @Assert\NotBlank()
+     *
      * @Assert\Length(min=3, max=50)
      *
      * @Assert\Type(type="string")
@@ -26,7 +28,9 @@ class EnvironmentRequest
      * @var string
      *
      * @Serializer\SerializedName("description")
+     *
      * @Serializer\Type("string")
+     *
      * @Assert\Type(type="string")
      */
     private $description;

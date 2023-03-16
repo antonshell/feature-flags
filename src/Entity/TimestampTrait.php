@@ -8,6 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * @ORM\MappedSuperclass
+ *
  * @ORM\HasLifecycleCallbacks
  */
 trait TimestampTrait
@@ -64,6 +65,7 @@ trait TimestampTrait
 
     /**
      * @ORM\PrePersist
+     *
      * @ORM\PreUpdate
      */
     public function updatedTimestamps(): void

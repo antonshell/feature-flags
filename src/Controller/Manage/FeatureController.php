@@ -58,6 +58,7 @@ class FeatureController extends AbstractApiController implements ManageTokenAuth
 
     /**
      * @Route("/api/feature", name="createFeature", methods={"POST"})
+     *
      * @ParamConverter(
      *      "featureRequest",
      *      converter="fos_rest.request_body",
@@ -90,6 +91,7 @@ class FeatureController extends AbstractApiController implements ManageTokenAuth
 
     /**
      * @Route("/api/feature/{name}", name="updateFeature", methods={"POST"})
+     *
      * @ParamConverter(
      *      "featureRequest",
      *      converter="fos_rest.request_body",
