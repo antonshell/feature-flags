@@ -6,57 +6,31 @@ namespace App\Entity;
 
 use App\Repository\FeatureValueRepository;
 use Doctrine\ORM\Mapping as ORM;
-use Doctrine\ORM\Mapping\Table;
 use Doctrine\ORM\Mapping\UniqueConstraint;
 
-/**
- * @ORM\Entity(repositoryClass=FeatureValueRepository::class)
- *
- * @ORM\HasLifecycleCallbacks
- *
- * @Table(name="feature_value",
- *    uniqueConstraints={
- *
- *        @UniqueConstraint(name="feature_value_unique",
- *            columns={"feature_id", "environment_id"})
- *    }
- * )
- */
+#[ORM\Table(name: 'feature_value')]
+#[UniqueConstraint(name: 'feature_value_unique', columns: ['feature_id', 'environment_id'])]
+#[ORM\Entity(repositoryClass: FeatureValueRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class FeatureValue
 {
     use TimestampTrait;
 
-    /**
-     * @ORM\Id
-     *
-     * @ORM\GeneratedValue
-     *
-     * @ORM\Column(type="integer")
-     */
-    private $id;
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: 'integer')]
+    private ?int $id = null;
 
-    /**
-     * @ORM\Column(type="boolean")
-     */
-    private $enabled;
+    #[ORM\Column(type: 'boolean')]
+    private bool $enabled;
 
-    /**
-     * @var Feature
-     *
-     * @ORM\ManyToOne(targetEntity="Feature", inversedBy="values")
-     *
-     * @ORM\JoinColumn(name="feature_id", referencedColumnName="id")
-     */
-    private $feature;
+    #[ORM\ManyToOne(targetEntity: Feature::class, inversedBy: 'values')]
+    #[ORM\JoinColumn(name: 'feature_id', referencedColumnName: 'id')]
+    private ?Feature $feature;
 
-    /**
-     * @var Environment
-     *
-     * @ORM\ManyToOne(targetEntity="Environment", inversedBy="featuresValues")
-     *
-     * @ORM\JoinColumn(name="environment_id", referencedColumnName="id")
-     */
-    private $environment;
+    #[ORM\ManyToOne(targetEntity: Environment::class, inversedBy: 'featuresValues')]
+    #[ORM\JoinColumn(name: 'environment_id', referencedColumnName: 'id')]
+    private ?Environment $environment;
 
     public function getId(): ?int
     {

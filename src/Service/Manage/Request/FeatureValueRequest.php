@@ -9,33 +9,18 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 class FeatureValueRequest
 {
-    /**
-     * @var string
-     *
-     * @Serializer\SerializedName("environment")
-     *
-     * @Serializer\Type("string")
-     *
-     * @Assert\NotBlank()
-     *
-     * @Assert\Length(min=3, max=50)
-     *
-     * @Assert\Type(type="string")
-     */
-    private $environment;
+    #[Serializer\SerializedName(name: 'environment')]
+    #[Serializer\Type(name: 'string')]
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 3, max: 50)]
+    #[Assert\Type(type: 'string')]
+    private string $environment;
 
-    /**
-     * @var bool
-     *
-     * @Serializer\SerializedName("enabled")
-     *
-     * @Serializer\Type("boolean")
-     *
-     * @Assert\NotBlank()
-     *
-     * @Assert\Type(type="boolean")
-     */
-    private $enabled;
+    #[Serializer\SerializedName(name: 'enabled')]
+    #[Serializer\Type(name: 'boolean')]
+    #[Assert\NotBlank]
+    #[Assert\Type(type: 'boolean')]
+    private bool $enabled;
 
     public function getEnvironment(): string
     {

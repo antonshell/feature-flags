@@ -28,9 +28,7 @@ class FeatureController extends AbstractApiController implements ManageTokenAuth
     ) {
     }
 
-    /**
-     * @Route("/api/features", name="getProjectFeatures")
-     */
+    #[Route('/api/features', name: 'getProjectFeatures')]
     public function getProjectFeatures(): JsonResponse
     {
         $project = $this->authService->getProjectByManageKeyAndReference();
@@ -40,9 +38,7 @@ class FeatureController extends AbstractApiController implements ManageTokenAuth
         return $this->createApiResponse($data);
     }
 
-    /**
-     * @Route("/api/feature/{name}", name="getFeature", methods={"GET"})
-     */
+    #[Route('/api/feature/{name}', name: 'getFeature', methods: ['GET'])]
     public function getByName(string $name): JsonResponse
     {
         $project = $this->authService->getProjectByManageKeyAndReference();
@@ -56,17 +52,8 @@ class FeatureController extends AbstractApiController implements ManageTokenAuth
         return $this->createApiResponse($data);
     }
 
-    /**
-     * @Route("/api/feature", name="createFeature", methods={"POST"})
-     *
-     * @ParamConverter(
-     *      "featureRequest",
-     *      converter="fos_rest.request_body",
-     *      class="App\Service\Manage\Request\FeatureRequest"
-     * )
-     *
-     * @throws \Exception
-     */
+    #[Route('/api/feature', name: 'createFeature', methods: ['POST'])]
+    #[ParamConverter('featureRequest', class: FeatureRequest::class, converter: 'fos_rest.request_body')]
     public function create(FeatureRequest $featureRequest): JsonResponse
     {
         $validationErrors = $this->validator->validate($featureRequest);
@@ -89,15 +76,8 @@ class FeatureController extends AbstractApiController implements ManageTokenAuth
         return $this->createApiResponse($data);
     }
 
-    /**
-     * @Route("/api/feature/{name}", name="updateFeature", methods={"POST"})
-     *
-     * @ParamConverter(
-     *      "featureRequest",
-     *      converter="fos_rest.request_body",
-     *      class="App\Service\Manage\Request\FeatureRequest"
-     * )
-     */
+    #[Route('/api/feature/{name}', name: 'updateFeature', methods: ['POST'])]
+    #[ParamConverter('featureRequest', class: FeatureRequest::class, converter: 'fos_rest.request_body')]
     public function update(string $name, FeatureRequest $featureRequest): JsonResponse
     {
         $project = $this->authService->getProjectByManageKeyAndReference();
@@ -124,9 +104,7 @@ class FeatureController extends AbstractApiController implements ManageTokenAuth
         return $this->createApiResponse($data);
     }
 
-    /**
-     * @Route("/api/feature/{name}", name="deleteFeature", methods={"DELETE"})
-     */
+    #[Route('/api/feature/{name}', name: 'deleteFeature', methods: ['DELETE'])]
     public function delete(string $name): JsonResponse
     {
         $project = $this->authService->getProjectByManageKeyAndReference();

@@ -117,5 +117,5 @@ jobs:
           files: ./coverage.xml
           flags: tests
           name: codecov-feature-flags
-          fail_ci_if_error: true
+          fail_ci_if_error: false
           verbose: true
