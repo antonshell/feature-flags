@@ -93,7 +93,7 @@
         }
     },
     "require-dev": {
-        "codeception/module-doctrine2": "^2.0",
+        "codeception/module-doctrine2": "^3.0",
         "phpunit/phpunit": "^9.5",
         "symfony/browser-kit": "^5.4",
         "symfony/css-selector": "^5.4",
