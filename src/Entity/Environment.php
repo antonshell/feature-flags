@@ -8,62 +8,35 @@ use App\Enum\EnvironmentEnum;
 use App\Repository\EnvironmentRepository;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-use Doctrine\ORM\Mapping\Table;
 use Doctrine\ORM\Mapping\UniqueConstraint;
 
-/**
- * @ORM\Entity(repositoryClass=EnvironmentRepository::class)
- *
- * @ORM\HasLifecycleCallbacks
- *
- * @Table(name="environment",
- *    uniqueConstraints={
- *
- *        @UniqueConstraint(name="environment_unique",
- *            columns={"name", "project_id"})
- *    }
- * )
- */
+#[ORM\Table(name: 'environment')]
+#[UniqueConstraint(name: 'environment_unique', columns: ['name', 'project_id'])]
+#[ORM\Entity(repositoryClass: EnvironmentRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Environment
 {
     use TimestampTrait;
 
     public const ENV_PROD = 'prod';
 
-    /**
-     * @ORM\Id
-     *
-     * @ORM\GeneratedValue
-     *
-     * @ORM\Column(type="integer")
-     */
-    private $id;
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: 'integer')]
+    private ?int $id = null;
 
-    /**
-     * @ORM\Column(type="string", length=255)
-     */
-    private $name;
+    #[ORM\Column(type: 'string', length: 255)]
+    private string $name;
 
-    /**
-     * @ORM\Column(type="text")
-     */
-    private $description;
+    #[ORM\Column(type: 'text')]
+    private string $description;
 
-    /**
-     * @var Project
-     *
-     * @ORM\ManyToOne(targetEntity="Project", inversedBy="environments")
-     *
-     * @ORM\JoinColumn(name="project_id", referencedColumnName="id")
-     */
-    private $project;
+    #[ORM\ManyToOne(targetEntity: Project::class, inversedBy: 'environments')]
+    #[ORM\JoinColumn(name: 'project_id', referencedColumnName: 'id')]
+    private ?Project $project;
 
-    /**
-     * @var Collection
-     *
-     * @ORM\OneToMany(targetEntity="FeatureValue", mappedBy="environment")
-     */
-    private $featuresValues;
+    #[ORM\OneToMany(mappedBy: 'environment', targetEntity: FeatureValue::class)]
+    private Collection $featuresValues;
 
     public function getId(): ?int
     {

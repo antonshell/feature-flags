@@ -7,73 +7,41 @@ namespace App\Entity;
 use App\Repository\ProjectRepository;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-use Doctrine\ORM\Mapping\Table;
 use Doctrine\ORM\Mapping\UniqueConstraint;
 
-/**
- * @ORM\Entity(repositoryClass=ProjectRepository::class)
- *
- * @ORM\HasLifecycleCallbacks
- *
- * @Table(name="project",
- *    uniqueConstraints={
- *
- *        @UniqueConstraint(name="project_unique",
- *            columns={"name", "owner"})
- *    }
- * )
- */
+#[ORM\Table(name: 'project')]
+#[UniqueConstraint(name: 'project_unique', columns: ['name', 'owner'])]
+#[ORM\Entity(repositoryClass: ProjectRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Project
 {
     use TimestampTrait;
 
-    /**
-     * @ORM\Id
-     *
-     * @ORM\GeneratedValue
-     *
-     * @ORM\Column(type="integer")
-     */
-    private $id;
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: 'integer')]
+    private ?int $id = null;
 
-    /**
-     * @ORM\Column(type="string", length=255)
-     */
-    private $name;
+    #[ORM\Column(type: 'string', length: 255)]
+    private string $name;
 
-    /**
-     * @ORM\Column(type="text")
-     */
-    private $description;
+    #[ORM\Column(type: 'text')]
+    private string $description;
 
-    /**
-     * @ORM\Column(type="string", length=255)
-     */
-    private $owner;
+    #[ORM\Column(type: 'string', length: 255)]
+    private string $owner;
 
-    /**
-     * @ORM\Column(type="string", length=255, unique=true)
-     */
-    private $readKey;
+    #[ORM\Column(type: 'string', length: 255, unique: true)]
+    private string $readKey;
 
-    /**
-     * @ORM\Column(type="string", length=255, unique=true)
-     */
-    private $manageKey;
+    #[ORM\Column(type: 'string', length: 255, unique: true)]
+    private string $manageKey;
 
-    /**
-     * @var Collection
-     *
-     * @ORM\OneToMany(targetEntity="Environment", mappedBy="project")
-     */
-    private $environments;
+    #[ORM\OneToMany(mappedBy: 'project', targetEntity: Environment::class)]
+    private Collection $environments;
 
-    /**
-     * @var Collection
-     *
-     * @ORM\OneToMany(targetEntity="Feature", mappedBy="project")
-     */
-    private $features;
+    #[ORM\OneToMany(mappedBy: 'project', targetEntity: Feature::class)]
+    private Collection $features;
 
     public function getId(): ?int
     {

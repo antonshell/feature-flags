@@ -4,43 +4,25 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use DateTimeInterface;
 use Doctrine\ORM\Mapping as ORM;
 
-/**
- * @ORM\MappedSuperclass
- *
- * @ORM\HasLifecycleCallbacks
- */
+#[ORM\MappedSuperclass]
+#[ORM\HasLifecycleCallbacks]
 trait TimestampTrait
 {
-    /**
-     * @var \DateTime
-     *
-     * @ORM\Column(
-     *     type="datetime",
-     *     nullable=true,
-     *     options={"default": "CURRENT_TIMESTAMP"}
-     * )
-     */
-    private $createdAt;
+    #[ORM\Column(type: 'datetime', nullable: true)]
+    private ?DateTimeInterface $createdAt = null;
 
-    /**
-     * @var \DateTime
-     *
-     * @ORM\Column(
-     *     type="datetime",
-     *     nullable=true,
-     *     columnDefinition="DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP"
-     * )
-     */
-    private $updatedAt;
+    #[ORM\Column(type: 'datetime', nullable: true, columnDefinition: 'DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP')]
+    private ?DateTimeInterface $updatedAt = null;
 
-    public function getCreatedAt(): ?\DateTime
+    public function getCreatedAt(): ?DateTimeInterface
     {
         return $this->createdAt;
     }
 
-    public function getUpdatedAt(): ?\DateTime
+    public function getUpdatedAt(): ?DateTimeInterface
     {
         if (null === $this->updatedAt) {
             return $this->getCreatedAt();
@@ -63,11 +45,8 @@ trait TimestampTrait
         return $this;
     }
 
-    /**
-     * @ORM\PrePersist
-     *
-     * @ORM\PreUpdate
-     */
+    #[ORM\PrePersist]
+    #[ORM\PreUpdate]
     public function updatedTimestamps(): void
     {
         $this->setUpdatedAt(new \DateTime('now'));
