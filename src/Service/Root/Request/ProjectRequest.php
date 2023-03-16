@@ -9,42 +9,23 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 class ProjectRequest
 {
-    /**
-     * @var string
-     *
-     * @Serializer\SerializedName("name")
-     *
-     * @Serializer\Type("string")
-     *
-     * @Assert\NotBlank()
-     *
-     * @Assert\Length(min=3, max=50)
-     *
-     * @Assert\Type(type="string")
-     */
-    private $name;
+    #[Serializer\SerializedName(name: 'name')]
+    #[Serializer\Type(name: 'string')]
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 3, max: 50)]
+    #[Assert\Type(type: 'string')]
+    private string $name;
 
-    /**
-     * @var string
-     *
-     * @Serializer\SerializedName("description")
-     *
-     * @Serializer\Type("string")
-     *
-     * @Assert\Type(type="string")
-     */
-    private $description;
+    #[Serializer\SerializedName(name: 'description')]
+    #[Serializer\Type(name: 'string')]
+    #[Assert\Type(type: 'string')]
+    private string $description;
 
-    /**
-     * @var string
-     *
-     * @Serializer\SerializedName("owner")
-     *
-     * @Serializer\Type("string")
-     *
-     * @Assert\Type(type="string")
-     */
-    private $owner;
+    #[Serializer\SerializedName(name: 'owner')]
+    #[Serializer\Type(name: 'string')]
+    #[Assert\NotBlank]
+    #[Assert\Type(type: 'string')]
+    private string $owner;
 
     public function getName(): string
     {
