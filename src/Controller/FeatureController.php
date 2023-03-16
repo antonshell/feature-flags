@@ -30,10 +30,8 @@ class FeatureController extends AbstractApiController
     ) {
     }
 
-    /**
-     * @Route("/feature/{projectOwner}/{projectName}/{featureName}/{env}", name="featureValueForEnv")
-     * @Route("/feature/{projectOwner}/{projectName}/{featureName}", name="featureValue")
-     */
+    #[Route('/feature/{projectOwner}/{projectName}/{featureName}/{env}', name: 'featureValueForEnv')]
+    #[Route('/feature/{projectOwner}/{projectName}/{featureName}', name: 'featureValue')]
     public function getFeatureFlag(string $projectOwner, string $projectName, string $featureName, string $env = Environment::ENV_PROD): Response
     {
         $project = $this->projectService->getProjectByNameAndOwner($projectName, $projectOwner);

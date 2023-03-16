@@ -27,9 +27,7 @@ class ProjectController extends AbstractApiController implements RootTokenAuthen
     ) {
     }
 
-    /**
-     * @Route("/manage/projects", name="getAllProjects")
-     */
+    #[Route('/manage/projects', name: 'getAllProjects')]
     public function getAll(Request $request): JsonResponse
     {
         $projects = $this->projectRepository->findAll();
@@ -38,9 +36,7 @@ class ProjectController extends AbstractApiController implements RootTokenAuthen
         return $this->createApiResponse($data);
     }
 
-    /**
-     * @Route("/manage/project/{id}", name="getProject", methods={"GET"})
-     */
+    #[Route('/manage/project/{id}', name: 'getProject', methods: ['GET'])]
     public function getById(int $id): JsonResponse
     {
         $project = $this->projectRepository->find($id);
@@ -53,17 +49,8 @@ class ProjectController extends AbstractApiController implements RootTokenAuthen
         return $this->createApiResponse($data);
     }
 
-    /**
-     * @Route("/manage/project", name="createProject", methods={"POST"})
-     *
-     * @ParamConverter(
-     *      "projectRequest",
-     *      converter="fos_rest.request_body",
-     *      class="App\Service\Root\Request\ProjectRequest"
-     * )
-     *
-     * @throws \Exception
-     */
+    #[Route('/manage/project', name: 'createProject', methods: ['POST'])]
+    #[ParamConverter('projectRequest', class: ProjectRequest::class, converter: 'fos_rest.request_body')]
     public function create(ProjectRequest $projectRequest): JsonResponse
     {
         $validationErrors = $this->validator->validate($projectRequest);
@@ -84,15 +71,8 @@ class ProjectController extends AbstractApiController implements RootTokenAuthen
         }
     }
 
-    /**
-     * @Route("/manage/project/{id}", name="updateProject", methods={"POST"})
-     *
-     * @ParamConverter(
-     *      "projectRequest",
-     *      converter="fos_rest.request_body",
-     *      class="App\Service\Root\Request\ProjectRequest"
-     * )
-     */
+    #[Route('/manage/project/{id}', name: 'updateProject', methods: ['POST'])]
+    #[ParamConverter('projectRequest', class: ProjectRequest::class, converter: 'fos_rest.request_body')]
     public function update(int $id, ProjectRequest $projectRequest): JsonResponse
     {
         $project = $this->projectRepository->find($id);
@@ -119,9 +99,7 @@ class ProjectController extends AbstractApiController implements RootTokenAuthen
         return $this->createApiResponse($data);
     }
 
-    /**
-     * @Route("/manage/project/{id}", name="deleteProject", methods={"DELETE"})
-     */
+    #[Route('/manage/project/{id}', name: 'deleteProject', methods: ['DELETE'])]
     public function delete(int $id): JsonResponse
     {
         $project = $this->projectRepository->find($id);

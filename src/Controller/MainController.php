@@ -11,9 +11,7 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class MainController extends AbstractApiController
 {
-    /**
-     * @Route("/", name="index")
-     */
+    #[Route('/', name: 'index')]
     public function index(Request $request): Response
     {
         return new JsonResponse([

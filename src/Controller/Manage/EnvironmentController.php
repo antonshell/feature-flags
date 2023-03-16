@@ -28,9 +28,7 @@ class EnvironmentController extends AbstractApiController implements ManageToken
     ) {
     }
 
-    /**
-     * @Route("/api/environments", name="getProjectEnvironments")
-     */
+    #[Route('/api/environments', name: 'getProjectEnvironments')]
     public function getProjectEnvironments(): JsonResponse
     {
         $project = $this->authService->getProjectByManageKeyAndReference();
@@ -40,9 +38,7 @@ class EnvironmentController extends AbstractApiController implements ManageToken
         return $this->createApiResponse($data);
     }
 
-    /**
-     * @Route("/api/environment/{name}", name="getEnvironment", methods={"GET"})
-     */
+    #[Route('/api/environment/{name}', name: 'getEnvironment', methods: ['GET'])]
     public function getByName(string $name): JsonResponse
     {
         $project = $this->authService->getProjectByManageKeyAndReference();
@@ -56,17 +52,8 @@ class EnvironmentController extends AbstractApiController implements ManageToken
         return $this->createApiResponse($data);
     }
 
-    /**
-     * @Route("/api/environment", name="createEnvironment", methods={"POST"})
-     *
-     * @ParamConverter(
-     *      "environmentRequest",
-     *      converter="fos_rest.request_body",
-     *      class="App\Service\Manage\Request\EnvironmentRequest"
-     * )
-     *
-     * @throws \Exception
-     */
+    #[Route('/api/environment', name: 'createEnvironment', methods: ['POST'])]
+    #[ParamConverter('environmentRequest', class: EnvironmentRequest::class, converter: 'fos_rest.request_body')]
     public function create(EnvironmentRequest $environmentRequest): JsonResponse
     {
         $validationErrors = $this->validator->validate($environmentRequest);
@@ -89,15 +76,8 @@ class EnvironmentController extends AbstractApiController implements ManageToken
         return $this->createApiResponse($data);
     }
 
-    /**
-     * @Route("/api/environment/{name}", name="updateEnvironment", methods={"POST"})
-     *
-     * @ParamConverter(
-     *      "environmentRequest",
-     *      converter="fos_rest.request_body",
-     *      class="App\Service\Manage\Request\EnvironmentRequest"
-     * )
-     */
+    #[Route('/api/environment/{name}', name: 'updateEnvironment', methods: ['POST'])]
+    #[ParamConverter('environmentRequest', class: EnvironmentRequest::class, converter: 'fos_rest.request_body')]
     public function update(string $name, EnvironmentRequest $environmentRequest): JsonResponse
     {
         $project = $this->authService->getProjectByManageKeyAndReference();
@@ -124,9 +104,7 @@ class EnvironmentController extends AbstractApiController implements ManageToken
         return $this->createApiResponse($data);
     }
 
-    /**
-     * @Route("/api/environment/{name}", name="deleteEnvironment", methods={"DELETE"})
-     */
+    #[Route('/api/environment/{name}', name: 'deleteEnvironment', methods: ['DELETE'])]
     public function delete(string $name): JsonResponse
     {
         $project = $this->authService->getProjectByManageKeyAndReference();

@@ -29,15 +29,8 @@ class FeatureValueController extends AbstractApiController implements ManageToke
     ) {
     }
 
-    /**
-     * @Route("/api/feature/{name}/value", name="setFeatureValue", methods={"POST"})
-     *
-     * @ParamConverter(
-     *      "featureValueRequest",
-     *      converter="fos_rest.request_body",
-     *      class="App\Service\Manage\Request\FeatureValueRequest"
-     * )
-     */
+    #[Route('/api/feature/{name}/value', name: 'setFeatureValue', methods: ['POST'])]
+    #[ParamConverter('featureValueRequest', class: FeatureValueRequest::class, converter: 'fos_rest.request_body')]
     public function setFeatureValue(string $name, FeatureValueRequest $featureValueRequest): JsonResponse
     {
         $project = $this->authService->getProjectByManageKeyAndReference();
