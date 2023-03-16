@@ -55,6 +55,7 @@ class ProjectController extends AbstractApiController implements RootTokenAuthen
 
     /**
      * @Route("/manage/project", name="createProject", methods={"POST"})
+     *
      * @ParamConverter(
      *      "projectRequest",
      *      converter="fos_rest.request_body",
@@ -85,6 +86,7 @@ class ProjectController extends AbstractApiController implements RootTokenAuthen
 
     /**
      * @Route("/manage/project/{id}", name="updateProject", methods={"POST"})
+     *
      * @ParamConverter(
      *      "projectRequest",
      *      converter="fos_rest.request_body",

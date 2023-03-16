@@ -12,9 +12,12 @@ use Doctrine\ORM\Mapping\UniqueConstraint;
 
 /**
  * @ORM\Entity(repositoryClass=ProjectRepository::class)
+ *
  * @ORM\HasLifecycleCallbacks
+ *
  * @Table(name="project",
  *    uniqueConstraints={
+ *
  *        @UniqueConstraint(name="project_unique",
  *            columns={"name", "owner"})
  *    }
@@ -26,7 +29,9 @@ class Project
 
     /**
      * @ORM\Id
+     *
      * @ORM\GeneratedValue
+     *
      * @ORM\Column(type="integer")
      */
     private $id;
@@ -58,12 +63,14 @@ class Project
 
     /**
      * @var Collection
+     *
      * @ORM\OneToMany(targetEntity="Environment", mappedBy="project")
      */
     private $environments;
 
     /**
      * @var Collection
+     *
      * @ORM\OneToMany(targetEntity="Feature", mappedBy="project")
      */
     private $features;

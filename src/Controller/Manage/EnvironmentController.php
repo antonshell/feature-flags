@@ -58,6 +58,7 @@ class EnvironmentController extends AbstractApiController implements ManageToken
 
     /**
      * @Route("/api/environment", name="createEnvironment", methods={"POST"})
+     *
      * @ParamConverter(
      *      "environmentRequest",
      *      converter="fos_rest.request_body",
@@ -90,6 +91,7 @@ class EnvironmentController extends AbstractApiController implements ManageToken
 
     /**
      * @Route("/api/environment/{name}", name="updateEnvironment", methods={"POST"})
+     *
      * @ParamConverter(
      *      "environmentRequest",
      *      converter="fos_rest.request_body",

@@ -13,9 +13,11 @@ class FeatureValueRequest
      * @var string
      *
      * @Serializer\SerializedName("environment")
+     *
      * @Serializer\Type("string")
      *
      * @Assert\NotBlank()
+     *
      * @Assert\Length(min=3, max=50)
      *
      * @Assert\Type(type="string")
@@ -26,9 +28,11 @@ class FeatureValueRequest
      * @var bool
      *
      * @Serializer\SerializedName("enabled")
+     *
      * @Serializer\Type("boolean")
      *
      * @Assert\NotBlank()
+     *
      * @Assert\Type(type="boolean")
      */
     private $enabled;

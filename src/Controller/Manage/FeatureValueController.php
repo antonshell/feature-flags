@@ -31,6 +31,7 @@ class FeatureValueController extends AbstractApiController implements ManageToke
 
     /**
      * @Route("/api/feature/{name}/value", name="setFeatureValue", methods={"POST"})
+     *
      * @ParamConverter(
      *      "featureValueRequest",
      *      converter="fos_rest.request_body",
