@@ -87,9 +87,6 @@ class FeatureRepositoryFixture extends BaseFixture
         ],
     ];
 
-    /**
-     * {@inheritdoc}
-     */
     public function load(ObjectManager $objectManager): void
     {
         $this->loadProjectsData($objectManager, $this->projectsData);

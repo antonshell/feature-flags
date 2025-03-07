@@ -24,7 +24,7 @@ class FeatureController extends AbstractApiController implements ManageTokenAuth
         private FeatureService $featureService,
         private FeatureRepository $featureRepository,
         private FeatureSerializer $featureSerializer,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
     ) {
     }
 

@@ -9,9 +9,6 @@ use Doctrine\Persistence\ObjectManager;
 
 class EmptyFixture extends AbstractFixture
 {
-    /**
-     * {@inheritdoc}
-     */
     public function load(ObjectManager $objectManager): void
     {
     }

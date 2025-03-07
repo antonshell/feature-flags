@@ -8,7 +8,7 @@ class ProjectReference
 {
     public function __construct(
         private string $owner,
-        private string $name
+        private string $name,
     ) {
     }
 

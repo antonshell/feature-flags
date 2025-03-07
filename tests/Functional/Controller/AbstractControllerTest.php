@@ -19,7 +19,7 @@ abstract class AbstractControllerTest extends AbstractFunctionalTest
     protected function authorizeWithManageAccessToken(
         string $token = EnvironmentControllerFixture::DEMO_MANAGE_KEY,
         string $owner = EnvironmentControllerFixture::OWNER,
-        string $projectName = EnvironmentControllerFixture::DEMO_PROJECT
+        string $projectName = EnvironmentControllerFixture::DEMO_PROJECT,
     ): void {
         $_SERVER['HTTP_AUTHORIZATION'] = sprintf('bearer %s', $token);
         $_SERVER['HTTP_PROJECT'] = sprintf('%s/%s', $owner, $projectName);
@@ -41,9 +41,6 @@ abstract class AbstractControllerTest extends AbstractFunctionalTest
         parent::tearDown();
     }
 
-    /**
-     * {@inheritdoc}
-     */
     protected function getFixtures(): array
     {
         return [

@@ -8,7 +8,7 @@ class ProjectCredentials
 {
     public function __construct(
         private string $readKey,
-        private string $manageKey
+        private string $manageKey,
     ) {
     }
 
