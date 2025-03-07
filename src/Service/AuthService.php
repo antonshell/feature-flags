@@ -18,7 +18,7 @@ class AuthService
 
     public function __construct(
         private ProjectRepository $projectRepository,
-        private string $rootToken
+        private string $rootToken,
     ) {
     }
 

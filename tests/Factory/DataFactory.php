@@ -22,7 +22,7 @@ class DataFactory
     protected Generator $faker;
 
     public function __construct(
-        EntityManager $entityManager
+        EntityManager $entityManager,
     ) {
         $this->entityManager = $entityManager;
         $this->faker = Factory::create();

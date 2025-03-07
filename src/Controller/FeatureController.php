@@ -26,7 +26,7 @@ class FeatureController extends AbstractApiController
         private FeatureService $featureService,
         private ProjectService $projectService,
         private EnvironmentService $environmentService,
-        private FeatureValueRepository $featureValueRepository
+        private FeatureValueRepository $featureValueRepository,
     ) {
     }
 

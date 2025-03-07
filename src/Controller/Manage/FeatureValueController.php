@@ -25,7 +25,7 @@ class FeatureValueController extends AbstractApiController implements ManageToke
         private EnvironmentService $environmentService,
         private FeatureValueRepository $featureValueRepository,
         private FeatureValueService $featureValueService,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
     ) {
     }
 

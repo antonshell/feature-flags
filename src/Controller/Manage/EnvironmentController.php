@@ -24,7 +24,7 @@ class EnvironmentController extends AbstractApiController implements ManageToken
         private EnvironmentService $environmentService,
         private EnvironmentRepository $environmentRepository,
         private EnvironmentSerializer $environmentSerializer,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
     ) {
     }
 

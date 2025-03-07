@@ -23,7 +23,7 @@ class ProjectController extends AbstractApiController implements RootTokenAuthen
         private ProjectService $projectService,
         private ProjectRepository $projectRepository,
         private ProjectSerializer $projectSerializer,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
     ) {
     }
 
