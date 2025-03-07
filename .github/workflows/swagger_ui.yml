@@ -16,7 +16,7 @@ jobs:
           name: spec-file
           path: swagger/openapi.yaml
       - name: Download openapi.json
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: spec-file
       - name: Generate Swagger UI
