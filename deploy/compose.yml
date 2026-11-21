@@ -1,0 +1,56 @@
+# Production stack. Lives on the server in $DEPLOY_PATH together with a .env file
+# (APP_IMAGE, APP_SECRET, ROOT_TOKEN, DB_PASSWORD) written by the GitHub Actions deploy job.
+#
+# The database is reachable only inside this stack (network "default"): it is not attached to "web"
+# and doesn't publish ports. Its data lives in the named volume feature-flags_db-data.
+name: feature-flags
+
+services:
+  app:
+    image: ${APP_IMAGE:?APP_IMAGE is not set}
+    container_name: feature-flags
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      APP_SECRET: ${APP_SECRET:?APP_SECRET is not set}
+      ROOT_TOKEN: ${ROOT_TOKEN:?ROOT_TOKEN is not set}
+      # DB_PASSWORD goes into a URL: use a URL-safe value (openssl rand -hex 24)
+      DATABASE_URL: mysql://feature_flags:${DB_PASSWORD:?DB_PASSWORD is not set}@database:3306/feature_flags?charset=utf8mb4
+    networks:
+      - default
+      - web
+
+  database:
+    # keep the version in sync with server_version in config/packages/doctrine.yaml
+    image: mariadb:11.4
+    container_name: feature-flags-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: feature_flags
+      MARIADB_USER: feature_flags
+      MARIADB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is not set}
+      # root is not needed by the app; the app user owns the feature_flags database
+      MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+      # minor version upgrades of the image upgrade the system tables on start
+      MARIADB_AUTO_UPGRADE: "1"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+      start_interval: 2s
+    volumes:
+      - db-data:/var/lib/mysql
+
+volumes:
+  db-data:
+
+networks:
+  web:
+    external: true
+    name: ${CADDY_NETWORK:-web}

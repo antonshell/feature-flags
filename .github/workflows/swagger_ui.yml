@@ -1,31 +1,32 @@
-# Based on this workflow: https://github.com/Legion2/open-cue-service/blob/main/.github/workflows/pages.yml
+# Publishes swagger/openapi.yaml as Swagger UI to GitHub Pages: https://antonshell.github.io/feature-flags/swagger-ui/
 name: Swagger UI
 on:
   push:
     branches:
       - master
+    paths:
+      - swagger/openapi.yaml
+      - .github/workflows/swagger_ui.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write   # push to the gh-pages branch
+
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
-      - name: Upload openapi.yaml
-        uses: actions/upload-artifact@v2
-        with:
-          name: spec-file
-          path: swagger/openapi.yaml
-      - name: Download openapi.json
-        uses: actions/download-artifact@v4
-        with:
-          name: spec-file
+        uses: actions/checkout@v4
+
       - name: Generate Swagger UI
         uses: Legion2/swagger-ui-action@v1
         with:
           output: swagger-ui
           spec-file: swagger/openapi.yaml
+
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: swagger-ui
