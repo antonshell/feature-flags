@@ -3,7 +3,8 @@
 #
 # The database is not attached to "web": Caddy and other projects can't reach it. Its port is published
 # only on the server's localhost (127.0.0.1:26506) for access via an SSH tunnel (README → Database access).
-# Its data lives in the named volume feature-flags_db-data.
+# Its data lives in the external volume feature-flags_db-data: created once by hand
+# (docker volume create feature-flags_db-data), never created or removed by compose.
 name: feature-flags
 
 services:
@@ -55,7 +56,11 @@ services:
       - db-data:/var/lib/mysql
 
 volumes:
+  # External: `docker compose down -v` doesn't delete it, and if it is missing, deploy fails
+  # instead of silently starting with an empty database.
   db-data:
+    external: true
+    name: feature-flags_db-data
 
 networks:
   web:
