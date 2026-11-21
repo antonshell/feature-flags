@@ -237,7 +237,8 @@ jobs:
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             docker compose pull
             docker compose up -d --wait database
-            bash backup.sh
+            # exit code 3 = the dump is created locally, only the upload to Spaces failed: deploy goes on
+            bash backup.sh || { rc=$?; [ "$rc" -eq 3 ] || exit "$rc"; echo "::warning::backup upload to Spaces failed"; }
             docker compose run --rm --no-deps app \
               php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
             docker compose up -d --remove-orphans

@@ -102,7 +102,8 @@ The build job smoke-tests the image together with a real MariaDB and pushes it t
 only if it passes; the deploy job runs only when lint, tests and build are green. On the server it:
 
 1. starts the database (if it isn't running) and waits until it is healthy
-2. dumps the database to `backups/` (`backup.sh`, keeps the 14 newest dumps)
+2. dumps the database to `backups/` (`backup.sh`, keeps the 14 newest dumps) and uploads it to DigitalOcean Spaces,
+   if configured (a failed upload is only a warning: the local dump exists)
 3. runs `doctrine:migrations:migrate` with the **new** image
 4. switches the app container to the new image and waits until it is healthy
 
@@ -220,17 +221,70 @@ Make a backup (`./backup.sh`) before changing data by hand.
 
 ## Backups
 
-`backup.sh` lives next to `compose.yml` on the server and runs before every deploy.
-Dumps are written to `/srv/feature-flags/backups/feature_flags-<UTC time>.sql.gz`, the 14 newest are kept
-(`KEEP=30 ./backup.sh` to keep more). They are on the same server: copy them elsewhere for real disaster recovery.
+`backup.sh` lives next to `compose.yml` on the server and runs before every deploy (before migrations).
+Dumps are written to `/srv/feature-flags/backups/feature_flags-<UTC time>.sql.gz`, the 14 newest are kept locally
+(`KEEP=30 ./backup.sh` to keep more). If `.backup.env` exists, every new dump is also uploaded to DigitalOcean Spaces
+(any S3-compatible storage) with [rclone](https://rclone.org) in a container — nothing is installed on the server.
 
-Daily backup via cron of the deploy user (`crontab -e`):
+| Exit code | Meaning                                                                    |
+|-----------|----------------------------------------------------------------------------|
+| `0`       | dump created (and uploaded, if `.backup.env` exists)                       |
+| `1`       | dump failed                                                                |
+| `3`       | dump created locally, upload failed — deploy goes on with a warning        |
+
+### Off-site copy: DigitalOcean Spaces
+
+1 . Spaces: bucket `antonshell`, dumps go to `backups/feature-flags/` (a folder per project under `backups/`).
+**Access Keys → Create Access Key → Limited Access**: only this bucket, permission *Read/Write/Delete*.
+Don't use a full-access key: it lives on the server.
+
+2 . On the server, create `/srv/feature-flags/.backup.env` (deploy never touches it):
+
+```
+cat > /srv/feature-flags/.backup.env <<'ENV'
+BACKUP_REMOTE=spaces:antonshell/backups/feature-flags
+RCLONE_CONFIG_SPACES_TYPE=s3
+RCLONE_CONFIG_SPACES_PROVIDER=DigitalOcean
+RCLONE_CONFIG_SPACES_ENDPOINT=fra1.digitaloceanspaces.com
+RCLONE_CONFIG_SPACES_ACCESS_KEY_ID=<key>
+RCLONE_CONFIG_SPACES_SECRET_ACCESS_KEY=<secret>
+ENV
+chmod 600 /srv/feature-flags/.backup.env
+```
+
+`fra1` is the bucket's region (see its URL: `<bucket>.<region>.digitaloceanspaces.com`).
+
+3 . Check: `./backup.sh` must end with `upload: spaces:antonshell/backups/feature-flags/feature_flags-<time>.sql.gz`.
+
+4 . Retention in the bucket. The script only uploads; old dumps are deleted by a lifecycle rule of the bucket
+(the Spaces UI has no editor for it, set it once via the S3 API):
+
+```
+docker run --rm -it --entrypoint sh python:3-alpine -c '
+  pip install -q s3cmd &&
+  s3cmd --access_key=<key> --secret_key=<secret> \
+    --host=fra1.digitaloceanspaces.com --host-bucket="%(bucket)s.fra1.digitaloceanspaces.com" \
+    expire s3://antonshell --expiry-days=90 --expiry-prefix=backups/feature-flags/'
+```
+
+List and download dumps from the bucket:
+
+```
+cd /srv/feature-flags
+docker run --rm --env-file .backup.env rclone/rclone:1.68.2 ls spaces:antonshell/backups/feature-flags
+docker run --rm --env-file .backup.env -v "$PWD/backups:/backups" rclone/rclone:1.68.2 \
+  copyto spaces:antonshell/backups/feature-flags/feature_flags-<time>.sql.gz /backups/feature_flags-<time>.sql.gz
+```
+
+### Daily backup
+
+Cron of the deploy user (`crontab -e`):
 
 ```
 30 3 * * * /srv/feature-flags/backup.sh >> /srv/feature-flags/backups/cron.log 2>&1
 ```
 
-Restore a dump:
+### Restore a dump
 
 ```
 cd /srv/feature-flags
