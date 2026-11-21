@@ -147,6 +147,7 @@ jobs:
       packages: write
     outputs:
       image: ${{ steps.image.outputs.ref }}
+      backup-image: ${{ steps.image.outputs.backup }}
     steps:
       - uses: actions/checkout@v4
 
@@ -158,9 +159,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Image reference
+      # both images go to the same GHCR package: the app as sha-<commit>, the backup cron container as backup-sha-<commit>
+      - name: Image references
         id: image
-        run: echo "ref=${REGISTRY}/${IMAGE_NAME,,}:sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "ref=${REGISTRY}/${IMAGE_NAME,,}:sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "backup=${REGISTRY}/${IMAGE_NAME,,}:backup-sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
       - name: Build image
         uses: docker/build-push-action@v6
@@ -176,15 +180,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # with a real MariaDB: migrations from an empty database, writes and reads through the API
-      - name: Smoke test
-        run: .github/scripts/smoke-test.sh "${{ steps.image.outputs.ref }}"
+      - name: Build backup image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: backup
+          load: true
+          tags: ${{ steps.image.outputs.backup }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=backup
+          cache-to: type=gha,mode=max,scope=backup
 
-      - name: Push image
-        run: docker push "${{ steps.image.outputs.ref }}"
+      # with a real MariaDB: migrations from an empty database, writes and reads through the API,
+      # a backup dump + upload with the backup image
+      - name: Smoke test
+        run: .github/scripts/smoke-test.sh "${{ steps.image.outputs.ref }}" "${{ steps.image.outputs.backup }}"
+
+      - name: Push images
+        run: |
+          docker push "${{ steps.image.outputs.ref }}"
+          docker push "${{ steps.image.outputs.backup }}"
 
   # ———————————————————————————————————————————————————————————————————————————
-  # Order on the server: database up → backup → migrations (with the new image) → switch the app.
+  # Order on the server: database up → backup → migrations (with the new image) → switch the app and backup containers.
   # If the backup or a migration fails, the old app container keeps running.
   deploy:
     if: github.ref == 'refs/heads/master'
@@ -200,14 +219,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Upload compose file and backup script
+      - name: Upload compose file
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           port: ${{ secrets.DEPLOY_PORT || 22 }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: deploy/compose.yml,deploy/backup.sh
+          source: deploy/compose.yml
           target: ${{ secrets.DEPLOY_PATH }}
           strip_components: 1
 
@@ -215,6 +234,7 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         env:
           APP_IMAGE: ${{ needs.build.outputs.image }}
+          BACKUP_IMAGE: ${{ needs.build.outputs.backup-image }}
           APP_SECRET: ${{ secrets.APP_SECRET }}
           ROOT_TOKEN: ${{ secrets.ROOT_TOKEN }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -226,19 +246,24 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT || 22 }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: APP_IMAGE,APP_SECRET,ROOT_TOKEN,DB_PASSWORD,DEPLOY_PATH,GHCR_USER,GHCR_TOKEN
+          envs: APP_IMAGE,BACKUP_IMAGE,APP_SECRET,ROOT_TOKEN,DB_PASSWORD,DEPLOY_PATH,GHCR_USER,GHCR_TOKEN
           script: |
             set -eu
             cd "$DEPLOY_PATH"
             umask 077
-            printf 'APP_IMAGE=%s\nAPP_SECRET=%s\nROOT_TOKEN=%s\nDB_PASSWORD=%s\n' \
-              "$APP_IMAGE" "$APP_SECRET" "$ROOT_TOKEN" "$DB_PASSWORD" > .env
+            printf 'APP_IMAGE=%s\nBACKUP_IMAGE=%s\nAPP_SECRET=%s\nROOT_TOKEN=%s\nDB_PASSWORD=%s\nHOST_UID=%s\nHOST_GID=%s\n' \
+              "$APP_IMAGE" "$BACKUP_IMAGE" "$APP_SECRET" "$ROOT_TOKEN" "$DB_PASSWORD" "$(id -u)" "$(id -g)" > .env
+            # .backup.env is optional (Spaces credentials, created by hand): compose needs the file to exist
+            touch .backup.env
+            mkdir -p backups
             trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             docker compose pull
             docker compose up -d --wait database
+            # dump before migrations with the new backup image;
             # exit code 3 = the dump is created locally, only the upload to Spaces failed: deploy goes on
-            bash backup.sh || { rc=$?; [ "$rc" -eq 3 ] || exit "$rc"; echo "::warning::backup upload to Spaces failed"; }
+            docker compose run --rm --no-deps backup backup \
+              || { rc=$?; [ "$rc" -eq 3 ] || exit "$rc"; echo "::warning::backup upload to Spaces failed"; }
             docker compose run --rm --no-deps app \
               php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
             docker compose up -d --remove-orphans
@@ -250,9 +275,14 @@ jobs:
             done
             [ "$healthy" = yes ] || { echo "feature-flags did not become healthy"; docker compose logs --tail=100 app; exit 1; }
             echo "feature-flags is healthy"
+            # backup container has no healthcheck: make sure supercronic stays up (it exits on a broken crontab)
+            sleep 3
+            [ "$(docker inspect -f '{{.State.Status}}' feature-flags-backup)" = running ] \
+              || { echo "feature-flags-backup is not running"; docker compose logs --tail=50 backup; exit 1; }
+            echo "feature-flags-backup is running"
 
   # ———————————————————————————————————————————————————————————————————————————
-  # Keep the 10 most recent images in GHCR (rollback targets), delete older ones.
+  # Keep the 20 most recent package versions in GHCR = 10 deploys (app + backup image each, rollback targets).
   cleanup-images:
     needs: deploy
     runs-on: ubuntu-latest
@@ -263,4 +293,4 @@ jobs:
         with:
           package-name: ${{ github.event.repository.name }}
           package-type: container
-          min-versions-to-keep: 10
+          min-versions-to-keep: 20

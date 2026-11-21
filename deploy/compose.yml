@@ -1,5 +1,7 @@
-# Production stack. Lives on the server in $DEPLOY_PATH together with a .env file
-# (APP_IMAGE, APP_SECRET, ROOT_TOKEN, DB_PASSWORD) written by the GitHub Actions deploy job.
+# Production stack. Lives on the server in $DEPLOY_PATH together with
+#   .env         — APP_IMAGE, BACKUP_IMAGE, APP_SECRET, ROOT_TOKEN, DB_PASSWORD, HOST_UID/HOST_GID:
+#                  rewritten by the GitHub Actions deploy job on every deploy
+#   .backup.env  — Spaces credentials for backups (README → Backups): created by hand, never touched by deploy
 #
 # The database is not attached to "web": Caddy and other projects can't reach it. Its port is published
 # only on the server's localhost (127.0.0.1:26506) for access via an SSH tunnel (README → Database access).
@@ -54,6 +56,29 @@ services:
       start_interval: 2s
     volumes:
       - db-data:/var/lib/mysql
+
+  # Daily dump of the database (config/backup/crontab), run by supercronic: Dockerfile target "backup".
+  # Dumps: ./backups (owned by the deploy user), uploaded to Spaces if .backup.env sets BACKUP_REMOTE.
+  # Logs: docker logs feature-flags-backup.  By hand: docker compose run --rm backup backup
+  backup:
+    image: ${BACKUP_IMAGE:?BACKUP_IMAGE is not set}
+    container_name: feature-flags-backup
+    restart: unless-stopped
+    # the deploy user: dumps in ./backups stay readable and removable without sudo
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    depends_on:
+      database:
+        condition: service_healthy
+    env_file: .backup.env
+    environment:
+      DB_HOST: database
+      DB_NAME: feature_flags
+      DB_USER: feature_flags
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is not set}
+      KEEP: "14"
+    volumes:
+      - ./backups:/backups
+    # network "default": the database + outbound internet for the upload; not attached to "web"
 
 volumes:
   # External: `docker compose down -v` doesn't delete it, and if it is missing, deploy fails

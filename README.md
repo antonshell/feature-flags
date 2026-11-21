@@ -90,25 +90,26 @@ curl --request GET \
 
 # Deploy (production)
 
-Production runs as two containers behind the existing Caddy container (`/srv/proxy`):
-the app ([FrankenPHP](https://frankenphp.dev)) and MariaDB.
+Production runs as three containers behind the existing Caddy container (`/srv/proxy`):
+the app ([FrankenPHP](https://frankenphp.dev)), MariaDB and `backup` (daily dumps, see [Backups](#backups)).
 The database is attached only to the stack's own network: Caddy and other projects can't reach it.
 Its port is published only on the server's localhost (`127.0.0.1:26506`) for access via an SSH tunnel.
 Its data lives in the external docker volume `feature-flags_db-data`: it is created once by hand,
 `docker compose down -v` doesn't delete it, and if it is missing, deploy fails instead of starting with an empty database.
 
 Every push to `master` runs `.github/workflows/ci.yml`: lint, audit, tests and the image build run in parallel.
-The build job smoke-tests the image together with a real MariaDB and pushes it to `ghcr.io/antonshell/feature-flags`
-only if it passes; the deploy job runs only when lint, tests and build are green. On the server it:
+The build job builds two images (the app `sha-<commit>` and the backup container `backup-sha-<commit>`),
+smoke-tests them together with a real MariaDB and pushes them to `ghcr.io/antonshell/feature-flags` only if it passes;
+the deploy job runs only when lint, tests and build are green. On the server it:
 
 1. starts the database (if it isn't running) and waits until it is healthy
-2. dumps the database to `backups/` (`backup.sh`, keeps the 14 newest dumps) and uploads it to DigitalOcean Spaces,
-   if configured (a failed upload is only a warning: the local dump exists)
+2. dumps the database to `backups/` with the new backup image and uploads it to DigitalOcean Spaces, if configured
+   (a failed upload is only a warning: the local dump exists)
 3. runs `doctrine:migrations:migrate` with the **new** image
-4. switches the app container to the new image and waits until it is healthy
+4. switches the app and backup containers to the new images, waits until the app is healthy and the backup container runs
 
 If the backup or a migration fails, deploy stops and the old app container keeps running.
-The audit job (`composer audit`) is informational. The 10 most recent images are kept in GHCR as rollback targets.
+The audit job (`composer audit`) is informational. The images of the 10 most recent deploys are kept in GHCR as rollback targets.
 
 ## One-time server setup
 
@@ -217,20 +218,35 @@ cd /srv/feature-flags
 docker compose exec database sh -c 'mariadb -u"$MARIADB_USER" -p"$MARIADB_PASSWORD" "$MARIADB_DATABASE"'
 ```
 
-Make a backup (`./backup.sh`) before changing data by hand.
+Make a backup (`docker compose run --rm backup backup`) before changing data by hand.
 
 ## Backups
 
-`backup.sh` lives next to `compose.yml` on the server and runs before every deploy (before migrations).
-Dumps are written to `/srv/feature-flags/backups/feature_flags-<UTC time>.sql.gz`, the 14 newest are kept locally
-(`KEEP=30 ./backup.sh` to keep more). If `.backup.env` exists, every new dump is also uploaded to DigitalOcean Spaces
-(any S3-compatible storage) with [rclone](https://rclone.org) in a container — nothing is installed on the server.
+The `feature-flags-backup` container (Dockerfile target `backup`: the MariaDB image + [supercronic](https://github.com/aptible/supercronic)
++ [rclone](https://rclone.org)) dumps the database daily by the schedule in `config/backup/crontab`, and the deploy job
+runs the same dump before migrations. Nothing is installed on the server and there is no host cron.
+
+- dumps: `/srv/feature-flags/backups/feature_flags-<UTC time>.sql.gz`, owned by the deploy user, the 14 newest are kept
+- off-site copy: every new dump is uploaded to DigitalOcean Spaces if `.backup.env` sets `BACKUP_REMOTE`
+
+| Schedule (UTC) | Job                                                                |
+|----------------|--------------------------------------------------------------------|
+| daily at 03:30 | dump the database, rotate local dumps, upload to Spaces            |
+
+```
+cd /srv/feature-flags
+docker logs feature-flags-backup               # logs of the scheduled runs
+docker compose run --rm backup backup          # backup now
+```
 
 | Exit code | Meaning                                                                    |
 |-----------|----------------------------------------------------------------------------|
-| `0`       | dump created (and uploaded, if `.backup.env` exists)                       |
+| `0`       | dump created (and uploaded, if `BACKUP_REMOTE` is set)                     |
 | `1`       | dump failed                                                                |
 | `3`       | dump created locally, upload failed — deploy goes on with a warning        |
+
+To change the schedule: edit `config/backup/crontab` (standard cron syntax, times in UTC) and deploy.
+The smoke test checks that the crontab is valid and that a dump is created and uploaded.
 
 ### Off-site copy: DigitalOcean Spaces
 
@@ -238,7 +254,7 @@ Dumps are written to `/srv/feature-flags/backups/feature_flags-<UTC time>.sql.gz
 **Access Keys → Create Access Key → Limited Access**: only this bucket, permission *Read/Write/Delete*.
 Don't use a full-access key: it lives on the server.
 
-2 . On the server, create `/srv/feature-flags/.backup.env` (deploy never touches it):
+2 . On the server, create `/srv/feature-flags/.backup.env` (deploy only creates it empty if missing, never changes it):
 
 ```
 cat > /srv/feature-flags/.backup.env <<'ENV'
@@ -253,11 +269,18 @@ chmod 600 /srv/feature-flags/.backup.env
 ```
 
 `fra1` is the bucket's region (see its URL: `<bucket>.<region>.digitaloceanspaces.com`).
+The running backup container reads `.backup.env` at start: after creating or changing it, recreate the container:
 
-3 . Check: `./backup.sh` must end with `upload: spaces:antonshell/backups/feature-flags/feature_flags-<time>.sql.gz`.
+```
+cd /srv/feature-flags && docker compose up -d --force-recreate backup
+```
 
-4 . Retention in the bucket. The script only uploads; old dumps are deleted by a lifecycle rule of the bucket
-(the Spaces UI has no editor for it, set it once via the S3 API):
+3 . Check: `docker compose run --rm backup backup` must end with
+`upload: spaces:antonshell/backups/feature-flags/feature_flags-<time>.sql.gz`.
+
+4 . Retention in the bucket. The container only uploads; old dumps are deleted by a lifecycle rule of the bucket
+(the Spaces UI has no editor for it, set it once via the S3 API). `s3cmd expire` replaces all lifecycle rules of the bucket:
+check first that there are none (`s3cmd getlifecycle s3://antonshell` with the same options).
 
 ```
 docker run --rm -it --entrypoint sh python:3-alpine -c '
@@ -267,21 +290,13 @@ docker run --rm -it --entrypoint sh python:3-alpine -c '
     expire s3://antonshell --expiry-days=90 --expiry-prefix=backups/feature-flags/'
 ```
 
-List and download dumps from the bucket:
+List and download dumps from the bucket (rclone is in the backup image, credentials from `.backup.env`):
 
 ```
 cd /srv/feature-flags
-docker run --rm --env-file .backup.env rclone/rclone:1.68.2 ls spaces:antonshell/backups/feature-flags
-docker run --rm --env-file .backup.env -v "$PWD/backups:/backups" rclone/rclone:1.68.2 \
-  copyto spaces:antonshell/backups/feature-flags/feature_flags-<time>.sql.gz /backups/feature_flags-<time>.sql.gz
-```
-
-### Daily backup
-
-Cron of the deploy user (`crontab -e`):
-
-```
-30 3 * * * /srv/feature-flags/backup.sh >> /srv/feature-flags/backups/cron.log 2>&1
+docker compose run --rm --no-deps backup rclone ls spaces:antonshell/backups/feature-flags
+docker compose run --rm --no-deps backup rclone copyto \
+  spaces:antonshell/backups/feature-flags/feature_flags-<time>.sql.gz /backups/feature_flags-<time>.sql.gz
 ```
 
 ### Restore a dump

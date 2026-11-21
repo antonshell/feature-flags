@@ -42,6 +42,39 @@ EOF
 ENV HOME=/tmp \
     XDEBUG_MODE=coverage
 
+# ---------- supercronic: cron for containers (env vars passed to jobs, logs to stdout, runs as any user) ----------
+# Checksums from https://github.com/aptible/supercronic/releases/tag/v0.2.51
+FROM alpine:3.20 AS supercronic
+ARG TARGETARCH
+ARG SUPERCRONIC_VERSION=v0.2.51
+RUN set -eux; \
+    case "${TARGETARCH:-amd64}" in \
+        amd64) arch=amd64; sha1=1692066e350a88ff4d7d6474fe3c7a6c41ec5e89 ;; \
+        arm64) arch=arm64; sha1=9d4c2000493215a1898502b2fc2dada3e8ea8c7a ;; \
+        *) echo "unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    wget -qO /supercronic "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-${arch}"; \
+    echo "${sha1}  /supercronic" | sha1sum -c -; \
+    chmod +x /supercronic
+
+# ---------- Backup: the "backup" cron container of deploy/compose.yml ----------
+# Daily mariadb-dump of the database (+ upload to S3 / DigitalOcean Spaces with rclone), schedule in config/backup/crontab.
+# Based on the same MariaDB image as the database, so mariadb-dump always matches the server version.
+FROM mariadb:11.4 AS backup
+
+COPY --from=supercronic /supercronic /usr/local/bin/supercronic
+COPY --from=rclone/rclone:1.68.2 /usr/local/bin/rclone /usr/local/bin/rclone
+COPY --chmod=755 config/backup/backup.sh /usr/local/bin/backup
+COPY config/backup/crontab /etc/backup/crontab
+
+# runs as the deploy user (see `user:` in deploy/compose.yml): rclone needs a writable home
+ENV HOME=/tmp \
+    BACKUP_DIR=/backups
+
+# not the database entrypoint: this container only runs the schedule (or `backup` by hand)
+ENTRYPOINT []
+CMD ["supercronic", "-passthrough-logs", "/etc/backup/crontab"]
+
 # ---------- Prod (default target — keep it last) ----------
 FROM base AS prod
 
