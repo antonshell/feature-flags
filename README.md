@@ -94,7 +94,8 @@ Production runs as two containers behind the existing Caddy container (`/srv/pro
 the app ([FrankenPHP](https://frankenphp.dev)) and MariaDB.
 The database is attached only to the stack's own network: Caddy and other projects can't reach it.
 Its port is published only on the server's localhost (`127.0.0.1:26506`) for access via an SSH tunnel.
-Its data lives in the docker volume `feature-flags_db-data`.
+Its data lives in the external docker volume `feature-flags_db-data`: it is created once by hand,
+`docker compose down -v` doesn't delete it, and if it is missing, deploy fails instead of starting with an empty database.
 
 Every push to `master` runs `.github/workflows/ci.yml`: lint, audit, tests and the image build run in parallel.
 The build job smoke-tests the image together with a real MariaDB and pushes it to `ghcr.io/antonshell/feature-flags`
@@ -122,7 +123,16 @@ sudo mkdir -p /srv/feature-flags && sudo chown deployment:deployment /srv/featur
 
 Add the public part of the deploy SSH key to `/home/deployment/.ssh/authorized_keys`.
 
-2 . Add the site to `/srv/proxy/Caddyfile` (see `deploy/Caddyfile.example`) and reload Caddy
+2 . Create the database volume (once; deploy fails with `external volume "feature-flags_db-data" not found` without it)
+
+```
+docker volume create feature-flags_db-data
+```
+
+The volume is external: compose never creates or removes it, so `docker compose down -v` keeps the data.
+It is deleted only explicitly: `docker volume rm feature-flags_db-data`.
+
+3 . Add the site to `/srv/proxy/Caddyfile` (see `deploy/Caddyfile.example`) and reload Caddy
 
 ```
 feature-flags.antonshell.me {
@@ -150,7 +160,7 @@ Settings → Environments → `production` → secrets:
 | `ROOT_TOKEN`     | token for the `/manage/*` API, `openssl rand -hex 32` |
 | `DB_PASSWORD`    | output of `openssl rand -hex 24` (URL-safe: it goes into `DATABASE_URL`) |
 
-`DB_PASSWORD` is applied by MariaDB only when the volume is created (first deploy).
+`DB_PASSWORD` is applied by MariaDB only when it initializes an empty volume (first deploy).
 To change it later, change it in the database first, then update the secret:
 
 ```
