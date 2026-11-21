@@ -1,0 +1,7 @@
+# Schedule of the "backup" container (deploy/compose.yml), run by supercronic: https://github.com/aptible/supercronic
+# Times are in UTC.
+#
+# min hour dom mon dow  command
+
+# Daily dump of the database to /srv/feature-flags/backups (+ upload to Spaces, if configured)
+30 3 * * *              backup

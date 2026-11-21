@@ -3,10 +3,14 @@
 # checks what PHPUnit can't see — the prod container boots, pdo_mysql talks to MariaDB, migrations apply
 # from a clean database, the Authorization header reaches PHP through FrankenPHP, prod mode hides debug info.
 #
-# Usage: .github/scripts/smoke-test.sh <image>
+# With a second image, also checks the backup cron container (Dockerfile target "backup"): the crontab is valid,
+# a dump of the same database is created and uploaded with rclone, a failed upload gives exit code 3.
+#
+# Usage: .github/scripts/smoke-test.sh <image> [<backup image>]
 set -euo pipefail
 
-IMAGE="${1:?usage: $0 <image>}"
+IMAGE="${1:?usage: $0 <image> [<backup image>]}"
+BACKUP_IMAGE="${2:-}"
 DB_IMAGE="${DB_IMAGE:-mariadb:11.4}"
 ID="feature-flags-smoke-$$"
 PORT="${SMOKE_PORT:-18099}"
@@ -14,6 +18,7 @@ BASE="http://127.0.0.1:$PORT"
 ROOT_TOKEN="smoke-root-token"
 DATABASE_URL="mysql://feature_flags:smoke@$ID-db:3306/feature_flags?charset=utf8mb4"
 failures=0
+TMP="$(mktemp -d)"
 
 cleanup() {
     if (( failures > 0 )); then
@@ -22,6 +27,7 @@ cleanup() {
     fi
     docker rm -f "$ID" "$ID-db" >/dev/null 2>&1 || true
     docker network rm "$ID" >/dev/null 2>&1 || true
+    rm -rf "$TMP"
 }
 trap cleanup EXIT
 
@@ -94,6 +100,29 @@ check "the project is stored" expect 200 '"name":"smoke"' GET /manage/projects "
 check "duplicate project → 400" expect 400 'Duplicated' POST /manage/project "${AUTH[@]}" \
     -H 'Content-Type: application/json' -d '{"name":"smoke","description":"smoke test","owner":"ci"}'
 check "errors are JSON without a stack trace" bash -c "! curl -s '$BASE/manage/project/999999' -H 'Authorization: bearer $ROOT_TOKEN' | grep -qi 'trace'"
+
+# —— backup container ——————————————————————————————————————————————————————————
+if [[ -n "$BACKUP_IMAGE" ]]; then
+    mkdir -p "$TMP/backups" "$TMP/remote"
+    # as in deploy/compose.yml: runs as the (deploy) user, dumps to a bind mount; "spaces" is a local rclone remote here
+    BACKUP_ARGS=(--rm --network "$ID" --user "$(id -u):$(id -g)" -v "$TMP/backups:/backups"
+        -e DB_HOST="$ID-db" -e DB_NAME=feature_flags -e DB_USER=feature_flags -e DB_PASSWORD=smoke)
+
+    check "backup: crontab is valid" docker run --rm "$BACKUP_IMAGE" supercronic -test /etc/backup/crontab
+    check "backup: dump + upload → exit 0" docker run "${BACKUP_ARGS[@]}" -v "$TMP/remote:/remote" \
+        -e RCLONE_CONFIG_SPACES_TYPE=local -e BACKUP_REMOTE=spaces:/remote/feature-flags "$BACKUP_IMAGE" backup
+    check "backup: the dump is a valid gzip with the project table and the created project" bash -c \
+        "f=\$(ls '$TMP'/backups/feature_flags-*.sql.gz) && gzip -t \"\$f\" && zcat \"\$f\" | grep -q 'CREATE TABLE \`project\`' && zcat \"\$f\" | grep -q \"'smoke'\""
+    check "backup: the dump is uploaded" bash -c "cmp '$TMP'/backups/feature_flags-*.sql.gz '$TMP'/remote/feature-flags/feature_flags-*.sql.gz"
+
+    sleep 1   # dump names have a one-second resolution
+    rc=0
+    docker run "${BACKUP_ARGS[@]}" -e RCLONE_CONFIG_SPACES_TYPE=s3 -e RCLONE_CONFIG_SPACES_PROVIDER=Other \
+        -e RCLONE_CONFIG_SPACES_ENDPOINT=http://127.0.0.1:1 -e BACKUP_REMOTE=spaces:bucket/feature-flags \
+        "$BACKUP_IMAGE" backup >/dev/null 2>&1 || rc=$?
+    check "backup: failed upload → exit 3, the dump stays local" bash -c \
+        "[ $rc -eq 3 ] && [ \$(ls '$TMP'/backups/feature_flags-*.sql.gz | wc -l) -eq 2 ]"
+fi
 
 if (( failures > 0 )); then
     echo "Smoke test failed: $failures check(s)"
