@@ -92,7 +92,8 @@ curl --request GET \
 
 Production runs as two containers behind the existing Caddy container (`/srv/proxy`):
 the app ([FrankenPHP](https://frankenphp.dev)) and MariaDB.
-The database is attached only to the stack's own network: Caddy and other projects can't reach it, no ports are published.
+The database is attached only to the stack's own network: Caddy and other projects can't reach it.
+Its port is published only on the server's localhost (`127.0.0.1:26506`) for access via an SSH tunnel.
 Its data lives in the docker volume `feature-flags_db-data`.
 
 Every push to `master` runs `.github/workflows/ci.yml`: lint, audit, tests and the image build run in parallel.
@@ -171,6 +172,41 @@ mysqldump --single-transaction --routines --triggers -u <user> -p feature_flags 
 zcat feature_flags-old.sql.gz | docker compose exec -T database sh -c 'exec mariadb -u"$MARIADB_USER" -p"$MARIADB_PASSWORD" "$MARIADB_DATABASE"'
 docker compose run --rm --no-deps app php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 ```
+
+## Database access
+
+The database port is published only on the server's localhost (`127.0.0.1:26506`), so it is reachable only via SSH.
+Credentials: user `feature_flags`, database `feature_flags`, password — `DB_PASSWORD` from `/srv/feature-flags/.env`
+(the `DB_PASSWORD` secret). The `feature_flags` user owns the database; root is not needed.
+
+1 . PhpStorm / DataGrip / DBeaver: SSH tunnel
+
+- **General**: host `127.0.0.1`, port `26506`, user `feature_flags`, database `feature_flags`, password from `.env`
+- **SSH/SSL**: Use SSH tunnel → `deployment@<server>`, authentication: key pair (the deploy key or your own key
+  in `/home/deployment/.ssh/authorized_keys`)
+
+The IDE picks a free local port for the tunnel by itself, so it never conflicts with local databases.
+
+2 . Manual tunnel for any client
+
+```
+ssh -N -L 26506:127.0.0.1:26506 deployment@<server>
+```
+
+Then connect to `127.0.0.1:26506` locally.
+
+Port convention: `1PPSS` locally (`docker-compose.yml`), `2PPSS` on the server (localhost-only ports).
+`PP` is the project (`65` for feature-flags), `SS` the service (`80` http, `06` MySQL/MariaDB, `82` swagger).
+So `16506` is always the local database and `26506` the production one: a tunnel can't be mixed up with the local database.
+
+3 . Console on the server
+
+```
+cd /srv/feature-flags
+docker compose exec database sh -c 'mariadb -u"$MARIADB_USER" -p"$MARIADB_PASSWORD" "$MARIADB_DATABASE"'
+```
+
+Make a backup (`./backup.sh`) before changing data by hand.
 
 ## Backups
 

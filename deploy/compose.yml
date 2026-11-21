@@ -1,8 +1,9 @@
 # Production stack. Lives on the server in $DEPLOY_PATH together with a .env file
 # (APP_IMAGE, APP_SECRET, ROOT_TOKEN, DB_PASSWORD) written by the GitHub Actions deploy job.
 #
-# The database is reachable only inside this stack (network "default"): it is not attached to "web"
-# and doesn't publish ports. Its data lives in the named volume feature-flags_db-data.
+# The database is not attached to "web": Caddy and other projects can't reach it. Its port is published
+# only on the server's localhost (127.0.0.1:26506) for access via an SSH tunnel (README → Database access).
+# Its data lives in the named volume feature-flags_db-data.
 name: feature-flags
 
 services:
@@ -37,6 +38,12 @@ services:
       MARIADB_RANDOM_ROOT_PASSWORD: "yes"
       # minor version upgrades of the image upgrade the system tables on start
       MARIADB_AUTO_UPGRADE: "1"
+    ports:
+      # Only on the server's localhost: reachable via an SSH tunnel, never from the internet.
+      # Never drop the 127.0.0.1 prefix: docker publishes ports past ufw/iptables rules.
+      # Port convention: 1PPSS locally, 2PPSS on the server (PP = project, SS = service:
+      # 80 http, 06 mysql/mariadb, 82 swagger). 26506 = production database of feature-flags.
+      - "127.0.0.1:26506:3306"
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s

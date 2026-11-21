@@ -36,7 +36,8 @@ services:
     volumes:
       - db-data:/var/lib/mysql
     ports:
-      - "16506:3306"
+      # only on localhost: not reachable from other machines in the network
+      - "127.0.0.1:16506:3306"
 
   # API docs: docker compose --profile swagger up
   swagger-ui:
