@@ -10,7 +10,7 @@
 # PHP 8.2: the locked laminas/laminas-code 4.10 (via symfony/proxy-manager-bridge) requires php ~8.1 || ~8.2
 FROM dunglas/frankenphp:1-php8.2-bookworm AS base
 
-RUN install-php-extensions pdo_mysql intl zip apcu opcache
+RUN install-php-extensions pdo_mysql intl zip opcache
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
