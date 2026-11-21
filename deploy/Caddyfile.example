@@ -1,0 +1,6 @@
+# Append to /srv/proxy/Caddyfile (Caddy and feature-flags share the external "web" network), then reload:
+#   cd /srv/proxy && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+feature-flags.antonshell.me {
+	encode zstd gzip
+	reverse_proxy feature-flags:8080
+}
